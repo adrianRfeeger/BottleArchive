@@ -23,7 +23,7 @@ Tested on Adrian's Apple silicon Mac on 12 and 13 October 2026 with the installe
 ## Delivery
 
 - Built and signed a fresh Release app. Extracted its ZIP into a separate directory and validated identifier/version, macOS 15 minimum, arm64 executable, icon, all eight localisation resources, signature and system-only runtime dependencies.
-- The ZIP is approximately 1.31 MB. The extracted app displayed its native window, estimate and compression controls, then created a verified 21 MB fixture archive. Reveal in Finder selected the finished file, which Finder identified as a CrossOver Bottle Archive.
+- The ZIP is approximately 1.32 MB. The extracted app displayed its native window, estimate and compression controls, then created a verified 21 MB fixture archive. Reveal in Finder selected the finished file, which Finder identified as a CrossOver Bottle Archive.
 - Restored the original Skyrim selection after the packaged-app test. No full-size Skyrim archive was created by these tests.
 - Independent review found two material issues: a compression failure could leave the job waiting for a paused exporter, and the destination check lacked a test during an active job. The fix observes compression exit concurrently and stops the exporter on failure. A regression reproduced the original failure before the fix, then passed in under a second. A second test replaces the destination during export and checks the specific destination error, process exit, preservation of existing files and absence of a published archive.
 - The final standard suite passed 37 regular tests. The declared integration test runs only with `BOTTLE_ARCHIVE_INTEGRATION=1`; its actual three-level restore result is listed above. The reviewer raised no minor findings.
@@ -58,3 +58,5 @@ A disposable 256 MiB fixture contained equal portions of random and repeating da
 | Bundled pigz | 18 | 0.134 s |
 
 Automatic was about 11.8 times faster than the original compressor in this test. Reading the bottle, writing to the destination and verifying the archive can limit the total backup speed.
+
+The delivered app and helper matched the extracted GUI-tested Release byte for byte. The final source suite passed after adoption into the Development project. Version 1.1 (2) includes both signed arm64 executables and all eight language resources.
