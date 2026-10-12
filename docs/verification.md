@@ -1,6 +1,6 @@
 # Verification record
 
-Tested on Adrian's Apple silicon Mac on 12 October 2026 with the installed CrossOver 26.3.
+Tested on Adrian's Apple silicon Mac on 12 and 13 October 2026 with the installed CrossOver 26.3.
 
 ## Automated checks
 
@@ -11,7 +11,7 @@ Tested on Adrian's Apple silicon Mac on 12 October 2026 with the installed Cross
 - Archive tests reject corrupted/truncated gzip files, a missing bottle configuration and extra roots.
 - Export tests cover successful verified publication, exporter/compressor failures, a missing destination, duplicate starts, cancellation and preservation of an existing archive.
 - View-model tests cover defaults, remembered preferences, saved/manual selection, publication ordering, stale estimate rejection, missing destinations and busy cancellation.
-- CrossOver created a disposable fixture bottle. The app exported it at all three compression levels, and CrossOver restored each archive into isolated temporary locations. File hashes, mode 0640, empty files, external link targets and the bottle configuration file were checked. Fast: 122,617,190 bytes. Balanced: 113,115,929 bytes. Maximum: 112,527,794 bytes. All three restorations passed.
+- CrossOver created a disposable fixture bottle. The app exported it at all three compression levels, and CrossOver restored each archive into isolated temporary locations. File hashes, mode 0640, empty files, external link targets and the bottle configuration file were checked. The final engine was retested on 13 October. Fast: 122,617,959 bytes. Balanced: 113,114,246 bytes. Maximum: 112,525,690 bytes. All three restorations passed.
 
 ## Interactive checks
 
