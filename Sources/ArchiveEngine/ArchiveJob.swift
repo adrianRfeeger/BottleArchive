@@ -78,6 +78,10 @@ public final class ArchiveJob: @unchecked Sendable {
             exporter = try OwnedProcess.spawn(executable: installation.exporter, arguments: ["--bottle", request.bottle.name, "--tar", "-"], environment: installation.environment(for: request.bottle))
         } catch { compressor.cancel(); _ = try? await compressor.wait(); throw error }
         register(exporter)
+        let compressionMonitor = Task.detached(priority: .utility) {
+            if let status = try? await compressor.wait(), status != 0 { exporter.cancel() }
+        }
+        defer { compressionMonitor.cancel() }
         defer { exporter.cancel(); try? exporter.stdoutHandle?.close() }
         var processed: UInt64 = 0, lastReport = Date.distantPast
         func checkDestination() throws {
@@ -102,8 +106,8 @@ public final class ArchiveJob: @unchecked Sendable {
             let exportStatus = try await exporter.wait()
             let compressionStatus = try await compressor.wait()
             try Task.checkCancellation()
-            guard exportStatus == 0 else { throw ArchiveError.failed("CrossOver could not export this bottle. \(exporter.stderrTail.suffix(1200))") }
             guard compressionStatus == 0 else { throw ArchiveError.failed("Compression failed. Check the free space and destination drive. \(compressor.stderrTail.suffix(1200))") }
+            guard exportStatus == 0 else { throw ArchiveError.failed("CrossOver could not export this bottle. \(exporter.stderrTail.suffix(1200))") }
             try output.synchronize()
             try checkDestination()
         } catch {
