@@ -75,3 +75,9 @@
 "Some bottle files cannot be read. Check their permissions." = "Some bottle files cannot be read. Check their permissions.";
 "The destination is unavailable or cannot be written to. Reconnect the drive or choose another folder." = "The destination is unavailable or cannot be written to. Reconnect the drive or choose another folder.";
 "An archive job is already running." = "An archive job is already running.";
+"Threads" = "Threads";
+"Automatic" = "Automatic";
+"More threads use more CPU." = "More threads use more CPU.";
+"Automatic leaves two cores available when possible." = "Automatic leaves two cores available when possible.";
+"Thread count" = "Thread count";
+"Automatic leaves two cores available when possible. Choose a larger thread count to use more CPU for compression. Export and verification can still limit the speed." = "Automatic leaves two cores available when possible. Choose a larger thread count to use more CPU for compression. Export and verification can still limit the speed.";

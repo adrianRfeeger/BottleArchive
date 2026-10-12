@@ -1,0 +1,48 @@
+{
+  "fixture_bytes": 268435456,
+  "level": 6,
+  "runs_per_case": 3,
+  "output": "discarded to isolate compression speed",
+  "results": [
+    {
+      "tool": "gzip",
+      "threads": 1,
+      "median_seconds": 1.7,
+      "runs": [
+        1.700197708,
+        1.69997,
+        1.6983968749999998
+      ]
+    },
+    {
+      "tool": "pigz",
+      "threads": 1,
+      "median_seconds": 1.758,
+      "runs": [
+        2.04719025,
+        1.7584311669999995,
+        1.7084322920000012
+      ]
+    },
+    {
+      "tool": "pigz",
+      "threads": 16,
+      "median_seconds": 0.144,
+      "runs": [
+        0.14656054199999957,
+        0.14385858400000018,
+        0.144015542
+      ]
+    },
+    {
+      "tool": "pigz",
+      "threads": 18,
+      "median_seconds": 0.134,
+      "runs": [
+        0.13219308300000066,
+        0.13391037499999925,
+        0.13584404100000036
+      ]
+    }
+  ]
+}

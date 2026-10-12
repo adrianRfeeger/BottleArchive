@@ -42,6 +42,15 @@ struct ContentView: View {
                     }
                     Text(L(model.compression == .fast ? "Less time compressing, usually a larger file." : model.compression == .maximum ? "More time compressing, usually a smaller file." : "A balance of compression time and file size."))
                         .font(.callout).foregroundStyle(.secondary).padding(.leading, 95)
+                    HStack {
+                        Text(L("Threads")).frame(width: 95, alignment: .leading)
+                        Picker(L("Threads"), selection: Binding(get: { model.threads }, set: { model.setThreads($0) })) {
+                            Text(L("Automatic") + " (" + String(CompressionThreads.resolved(0)) + ")").tag(0)
+                            ForEach(1...max(1, ProcessInfo.processInfo.activeProcessorCount), id: \.self) { Text(String($0)).tag($0) }
+                        }.labelsHidden().frame(width: 165).disabled(model.isBusy).accessibilityLabel(L("Threads"))
+                        Spacer()
+                        Text(L("More threads use more CPU.")).font(.caption).foregroundStyle(.secondary)
+                    }.help(L("Automatic leaves two cores available when possible."))
                     Divider()
                     HStack(alignment: .top) {
                         sizeCard(L("Bottle size"), model.snapshot.map { bytes($0.logicalBytes) } ?? L("Not yet scanned"))
@@ -99,7 +108,7 @@ struct ContentView: View {
                 Button(L("Create Archive")) { model.createArchive() }.buttonStyle(.borderedProminent).tint(.purple).controlSize(.large)
                     .keyboardShortcut(.return, modifiers: []).disabled(!model.canCreateArchive)
             }
-        }.padding(24).frame(minWidth: 650, minHeight: 635)
+        }.padding(24).frame(minWidth: 650, minHeight: 685)
         .background(WindowSupport(model: model).frame(width: 0, height: 0))
     }
     private func sizeCard(_ title:String,_ value:String)->some View { VStack(alignment:.leading,spacing:5){Text(title).font(.caption).foregroundStyle(.secondary);Text(value).font(.title3.weight(.semibold)).monospacedDigit()} }

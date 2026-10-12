@@ -75,3 +75,9 @@
 "Some bottle files cannot be read. Check their permissions." = "无法读取部分容器文件。请检查权限。";
 "The destination is unavailable or cannot be written to. Reconnect the drive or choose another folder." = "目标位置不可用或无法写入。请重新连接驱动器或选择其他文件夹。";
 "An archive job is already running." = "已有归档任务正在运行。";
+"Threads" = "线程";
+"Automatic" = "自动";
+"More threads use more CPU." = "更多线程会占用更多CPU资源。";
+"Automatic leaves two cores available when possible." = "自动模式会尽可能保留两个空闲核心。";
+"Thread count" = "线程数";
+"Automatic leaves two cores available when possible. Choose a larger thread count to use more CPU for compression. Export and verification can still limit the speed." = "自动模式会尽可能保留两个空闲核心。增加线程数可为压缩分配更多CPU资源。导出和验证仍可能限制速度。";

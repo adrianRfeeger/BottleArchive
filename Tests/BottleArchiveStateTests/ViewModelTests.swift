@@ -17,4 +17,18 @@ struct ViewModelTests {
 
  @Test @MainActor func unavailableDestinationAndBusyCancellation() async throws {let m=model();let b=try bottle();defer{try? FileManager.default.removeItem(at:b.url)};let out=b.url.deletingLastPathComponent().appendingPathComponent("Output-"+UUID().uuidString);try FileManager.default.createDirectory(at:out,withIntermediateDirectories:true);defer{try? FileManager.default.removeItem(at:out)};let app=out.appendingPathComponent("Fake.app"),bin=app.appendingPathComponent("Contents/SharedSupport/CrossOver/bin");try FileManager.default.createDirectory(at:bin,withIntermediateDirectories:true);for (n,body) in [("wine","exit 1"),("cxbottle","sleep 30")]{let u=bin.appendingPathComponent(n);try Data(("#!/bin/sh\n"+body+"\n").utf8).write(to:u);try FileManager.default.setAttributes([.posixPermissions:0o755],ofItemAtPath:u.path)};m.selectBottle(b);try await settle(m);m.setDestination(out.appendingPathComponent("missing"));#expect(!m.canCreateArchive);m.setDestination(out);m.setCrossOver(app);#expect(m.canCreateArchive);m.createArchive();#expect(m.isBusy);#expect(!m.canCreateArchive);m.createArchive();m.cancel();for _ in 0..<500{if !m.isBusy{break};try await Task.sleep(for:.milliseconds(10))};#expect(!m.isBusy);#expect(m.completedResult == nil)}
 
+ @Test @MainActor func remembersThreadsWithoutResampling() async throws {
+  let d = UserDefaults(suiteName: UUID().uuidString)!
+  let m = ArchiveViewModel(defaults: d, autoDiscover: false)
+  let b = try bottle(); defer { try? FileManager.default.removeItem(at: b.url) }
+  m.selectBottle(b); try await settle(m)
+  let estimate = m.estimate?.estimatedBytes
+  #expect(m.threads == 0)
+  m.setThreads(4)
+  #expect(m.threads == 4)
+  #expect(!m.isEstimating && m.estimate?.estimatedBytes == estimate)
+  let restored = ArchiveViewModel(defaults: d, autoDiscover: false)
+  #expect(restored.threads == 4)
+ }
+
 }

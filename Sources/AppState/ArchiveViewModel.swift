@@ -5,6 +5,7 @@ import ArchiveEngine
 @MainActor public final class ArchiveViewModel: ObservableObject {
     @Published public private(set) var bottles: [Bottle] = []
     @Published public private(set) var selectedBottle: Bottle?
+    @Published public private(set) var threads = 0
     @Published public private(set) var compression: CompressionPreset
     @Published public private(set) var destination: URL
     @Published public private(set) var crossOverApp: URL?
@@ -27,6 +28,7 @@ import ArchiveEngine
     public static var jobMarkerURL: URL { FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Caches/BottleArchive/active-job") }
     public init(defaults: UserDefaults = .standard, autoDiscover: Bool = true) {
         self.defaults = defaults
+        threads = min(max(0, defaults.integer(forKey: "threads")), max(1, ProcessInfo.processInfo.activeProcessorCount))
         compression = CompressionPreset(rawValue: defaults.string(forKey: "compression") ?? "balanced") ?? .balanced
         destination = URL(fileURLWithPath: defaults.string(forKey: "destination") ?? "/Volumes/External/Crossover Archives")
         crossOverApp = defaults.string(forKey: "crossOverApp").map { URL(fileURLWithPath: $0) } ?? CrossOverInstallation.locate()
@@ -54,6 +56,7 @@ import ArchiveEngine
         compression = value; defaults.set(value.rawValue, forKey: "compression")
         estimate = nil; estimateSize()
     }
+    public func setThreads(_ value: Int) { guard !isBusy else { return }; threads = min(max(0, value), max(1, ProcessInfo.processInfo.activeProcessorCount)); defaults.set(threads, forKey: "threads") }
     public func setDestination(_ value: URL) { guard !isBusy else{return};destination=value;defaults.set(value.path,forKey:"destination");error=nil }
     public func setCrossOver(_ value: URL) { guard !isBusy else{return};crossOverApp=value;defaults.set(value.path,forKey:"crossOverApp");error=nil }
     public func estimateSize() {
@@ -83,7 +86,7 @@ import ArchiveEngine
         isBusy=true;isCancelling=false;error=nil;completedResult=nil;status="Preparing…"
         try? FileManager.default.createDirectory(at:Self.jobMarkerURL.deletingLastPathComponent(),withIntermediateDirectories:true)
         try? Data(String(ProcessInfo.processInfo.processIdentifier).utf8).write(to:Self.jobMarkerURL,options:.atomic)
-        let request=ArchiveRequest(bottle:bottle,destination:destination,compression:compression,crossOverApp:app,estimatedBytes:estimate?.estimatedBytes)
+        let request=ArchiveRequest(bottle:bottle,destination:destination,compression:compression,crossOverApp:app,estimatedBytes:estimate?.estimatedBytes,threads:threads)
         let stream=job.start(request:request,snapshot:snapshot)
         jobTask=Task {
             do {
@@ -110,6 +113,6 @@ import ArchiveEngine
         else {generation += 1;estimationTask?.cancel();estimationTask=nil;isEstimating=false;status="Size estimate unavailable"}
     }
     public func diagnostics() -> String {
-        "Bottle Archive 1.0 (1)\nmacOS: \(ProcessInfo.processInfo.operatingSystemVersionString)\nCrossOver available: \(crossOverApp != nil)\nCompression level: \(compression.gzipLevel)\nArchive active: \(isBusy)\nEstimate available: \(estimate != nil)\nLast stage: \(progress?.stage.rawValue ?? "none")\nLast result verified: \(completedResult?.verified ?? false)"
+        "Bottle Archive 1.1 (2)\nmacOS: \(ProcessInfo.processInfo.operatingSystemVersionString)\nCrossOver available: \(crossOverApp != nil)\nCompression level: \(compression.gzipLevel)\nCompression threads: \(CompressionThreads.resolved(threads))\nArchive active: \(isBusy)\nEstimate available: \(estimate != nil)\nLast stage: \(progress?.stage.rawValue ?? "none")\nLast result verified: \(completedResult?.verified ?? false)"
     }
 }

@@ -75,3 +75,9 @@
 "Some bottle files cannot be read. Check their permissions." = "No se pueden leer algunos archivos. Revisa sus permisos.";
 "The destination is unavailable or cannot be written to. Reconnect the drive or choose another folder." = "El destino no está disponible o no permite escribir. Reconecta la unidad o elige otra carpeta.";
 "An archive job is already running." = "Ya hay un archivo en curso.";
+"Threads" = "Hilos";
+"Automatic" = "Automático";
+"More threads use more CPU." = "Más hilos utilizan más CPU.";
+"Automatic leaves two cores available when possible." = "El modo automático deja dos núcleos disponibles cuando es posible.";
+"Thread count" = "Número de hilos";
+"Automatic leaves two cores available when possible. Choose a larger thread count to use more CPU for compression. Export and verification can still limit the speed." = "El modo automático deja dos núcleos disponibles cuando es posible. Elija más hilos para dedicar más CPU a la compresión. La exportación y la verificación pueden seguir limitando la velocidad.";

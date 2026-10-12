@@ -9,7 +9,7 @@ func L(_ key: String) -> String { NSLocalizedString(key, bundle: Bundle.main.res
     var body: some Scene {
         Window("Bottle Archive", id: "main") {
             ContentView(model: model).onAppear { delegate.model = model }
-        }.defaultSize(width: 690, height: 665)
+        }.defaultSize(width: 690, height: 715)
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .appInfo) { SupportCommands() }

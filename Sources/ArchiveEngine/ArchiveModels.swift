@@ -12,8 +12,9 @@ public struct BottleSnapshot: Sendable { public let bottle: Bottle; public let l
 public enum ArchiveStage: String, Sendable { case preparing, archiving, verifying, completed }
 public struct ArchiveRequest: Sendable {
  public let bottle:Bottle, destination:URL, compression:CompressionPreset, crossOverApp:URL
+ public let threads:Int
  public let estimatedBytes:UInt64?
- public init(bottle:Bottle,destination:URL,compression:CompressionPreset,crossOverApp:URL,estimatedBytes:UInt64?=nil){self.bottle=bottle;self.destination=destination;self.compression=compression;self.crossOverApp=crossOverApp;self.estimatedBytes=estimatedBytes}
+ public init(bottle:Bottle,destination:URL,compression:CompressionPreset,crossOverApp:URL,estimatedBytes:UInt64?=nil,threads:Int=0){self.bottle=bottle;self.destination=destination;self.compression=compression;self.crossOverApp=crossOverApp;self.estimatedBytes=estimatedBytes;self.threads=threads}
 }
 public struct ArchiveProgress: Sendable { public let stage:ArchiveStage;public let fraction:Double?;public let processedBytes:UInt64;public let outputBytes:UInt64;public let elapsedSeconds:Double;public let remainingSeconds:Double? }
 public struct ArchiveResult: Codable, Sendable {public let archiveURL:URL;public let compression:CompressionPreset;public let sourceBytes:UInt64;public let archiveBytes:UInt64;public let elapsedSeconds:Double;public let verified:Bool}

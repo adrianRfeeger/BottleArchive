@@ -75,3 +75,9 @@
 "Some bottle files cannot be read. Check their permissions." = "一部のファイルを読み取れません。アクセス権を確認してください。";
 "The destination is unavailable or cannot be written to. Reconnect the drive or choose another folder." = "保存先を利用できないか書き込めません。ドライブを再接続するか別のフォルダを選択してください。";
 "An archive job is already running." = "アーカイブの処理は既に実行中です。";
+"Threads" = "スレッド";
+"Automatic" = "自動";
+"More threads use more CPU." = "スレッドを増やすとCPU使用量が増えます。";
+"Automatic leaves two cores available when possible." = "自動では可能な場合、2つのコアを空けておきます。";
+"Thread count" = "スレッド数";
+"Automatic leaves two cores available when possible. Choose a larger thread count to use more CPU for compression. Export and verification can still limit the speed." = "自動では可能な場合、2つのコアを空けておきます。圧縮に使うCPUを増やすには、スレッド数を増やしてください。書き出しと検証が速度を制限する場合もあります。";

@@ -25,10 +25,13 @@ import Testing
   _ = try await run(install.wine,["--bottle",bottle.name,"--ux-app","wineserver","-w"],env:env)
   let output=root.appendingPathComponent("archives");try FileManager.default.createDirectory(at:output,withIntermediateDirectories:true)
   let snapshot=try await BottleScanner.scan(bottle)
+  let parallel = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent(".build/debug/pigz")
+  #expect(FileManager.default.isExecutableFile(atPath: parallel.path))
   for compression in CompressionPreset.allCases {
+   let threads = compression == .fast ? 1 : compression == .balanced ? 0 : ProcessInfo.processInfo.activeProcessorCount
    var result:ArchiveResult?
-   let request=ArchiveRequest(bottle:bottle,destination:output,compression:compression,crossOverApp:app)
-   for try await event in ArchiveJob().start(request:request,snapshot:snapshot){if case .completed(let value)=event{result=value}}
+   let request=ArchiveRequest(bottle:bottle,destination:output,compression:compression,crossOverApp:app,threads:threads)
+   for try await event in ArchiveJob(parallelGzip:parallel).start(request:request,snapshot:snapshot){if case .completed(let value)=event{result=value}}
    let archive=try #require(result?.archiveURL)
    let restoreRoot=root.appendingPathComponent("restore-"+compression.rawValue);try FileManager.default.createDirectory(at:restoreRoot,withIntermediateDirectories:true)
    env=install.environment(for:Bottle(url:restoreRoot.appendingPathComponent("Restored Bottle")))
@@ -42,7 +45,7 @@ import Testing
    #expect(try FileManager.default.destinationOfSymbolicLink(atPath:restored.appendingPathComponent("drive_c/external-fixture").path) == root.path)
    #expect(try Data(contentsOf:restored.appendingPathComponent(relative).deletingLastPathComponent().appendingPathComponent("empty")).isEmpty)
    #expect(FileManager.default.fileExists(atPath:restored.appendingPathComponent("cxbottle.conf").path))
-   print("CrossOver restored \(compression.rawValue): \(archive.lastPathComponent), \(result!.archiveBytes) bytes")
+   print("CrossOver restored \(compression.rawValue), \(CompressionThreads.resolved(threads)) threads: \(archive.lastPathComponent), \(result!.archiveBytes) bytes")
   }
  }
 }
