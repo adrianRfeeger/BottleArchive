@@ -8,3 +8,13 @@ public enum ArchiveError: Error, LocalizedError, Equatable { case invalidBottle,
 }
 public struct FileSampleCandidate: Sendable { public let url: URL; public let size: UInt64 }
 public struct BottleSnapshot: Sendable { public let bottle: Bottle; public let logicalBytes: UInt64; public let archiveInputEstimate: UInt64; public let fileCount: Int; public let files: [FileSampleCandidate]; public let externalLinks:[URL] }
+
+public enum ArchiveStage: String, Sendable { case preparing, archiving, verifying, completed }
+public struct ArchiveRequest: Sendable {
+ public let bottle:Bottle, destination:URL, compression:CompressionPreset, crossOverApp:URL
+ public let estimatedBytes:UInt64?
+ public init(bottle:Bottle,destination:URL,compression:CompressionPreset,crossOverApp:URL,estimatedBytes:UInt64?=nil){self.bottle=bottle;self.destination=destination;self.compression=compression;self.crossOverApp=crossOverApp;self.estimatedBytes=estimatedBytes}
+}
+public struct ArchiveProgress: Sendable { public let stage:ArchiveStage;public let fraction:Double?;public let processedBytes:UInt64;public let outputBytes:UInt64;public let elapsedSeconds:Double;public let remainingSeconds:Double? }
+public struct ArchiveResult: Codable, Sendable {public let archiveURL:URL;public let compression:CompressionPreset;public let sourceBytes:UInt64;public let archiveBytes:UInt64;public let elapsedSeconds:Double;public let verified:Bool}
+public enum ArchiveEvent: Sendable {case progress(ArchiveProgress), completed(ArchiveResult)}
