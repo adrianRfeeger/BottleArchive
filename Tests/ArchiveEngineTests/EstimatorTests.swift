@@ -1,0 +1,9 @@
+import Foundation
+import Testing
+@testable import ArchiveEngine
+struct EstimatorTests {
+ @Test func compressibleSizeAndLevels() async throws {let f=try Fixture();defer{f.clean()};try f.write("text.txt",Data(repeating:65,count:2_000_000));let s=try await BottleScanner.scan(f.bottle);for c in CompressionPreset.allCases {let e=try await SizeEstimator.estimate(snapshot:s,compression:c);#expect(e.estimatedBytes < s.logicalBytes / 4);#expect(e.sampledBytes <= 64*1024*1024);#expect(e.gzipLevel == c.gzipLevel)}}
+ @Test func incompressibleAndMixed() async throws {let f=try Fixture();defer{f.clean()};var g=SystemRandomNumberGenerator();let data=Data((0..<200_000).map{_ in UInt8.random(in:0...255,using:&g)});try f.write("random.bin",data);var s=try await BottleScanner.scan(f.bottle);let e=try await SizeEstimator.estimate(snapshot:s,compression:.balanced);#expect(e.estimatedBytes > s.logicalBytes/2);try f.write("text.txt",Data(repeating:0,count:500_000));s=try await BottleScanner.scan(f.bottle);let mix=try await SizeEstimator.estimate(snapshot:s,compression:.balanced);#expect(mix.estimatedBytes < s.logicalBytes/2)}
+ @Test func refusesChangedFileLink() async throws {let f=try Fixture();defer{f.clean()};try f.write("data.bin",Data(repeating:1,count:1000));let s=try await BottleScanner.scan(f.bottle);let u=f.bottle.url.appendingPathComponent("data.bin");try FileManager.default.removeItem(at:u);try FileManager.default.createSymbolicLink(at:u,withDestinationURL:URL(fileURLWithPath:"/etc/hosts"));await #expect(throws:ArchiveError.self){try await SizeEstimator.estimate(snapshot:s,compression:.fast)}}
+ @Test func cancelledEstimate() async throws {let f=try Fixture();defer{f.clean()};let s=try await BottleScanner.scan(f.bottle);let t=Task {try await SizeEstimator.estimate(snapshot:s,compression:.fast)};t.cancel();await #expect(throws:CancellationError.self){try await t.value}}
+}
