@@ -29,10 +29,10 @@
 ## Review focus
 
 1. A destination symlink points inside the bottle: resolve paths and reject it before creating output. Task 1 owns the test.
-2. The destination disconnects, fills up or becomes unwritable mid-job: fail without publishing an archive and keep the UI responsive. Task 3 owns injected I/O failure tests.
-3. The user changes bottle or compression during estimation: discard stale results and cancel obsolete work. Task 5 owns the state test.
+2. The destination disconnects, fills up or becomes unwritable mid-job: fail without publishing an archive and keep the UI responsive. Task 5 owns injected I/O failure tests.
+3. The user changes bottle or compression during estimation: discard stale results and cancel obsolete work. Task 6 owns the state test.
 4. A failed child leaves descendants or a blocked pipe: cancel only this job's process groups, drain errors concurrently and reap children. Task 3 owns the cancellation test.
-5. A long Unicode path or an external link appears in the archive: validate through libarchive, preserve the link and restore the supported metadata. Tasks 4 and 6 own these tests.
+5. A long Unicode path or an external link appears in the archive: validate through libarchive, preserve the link and restore the supported metadata. Tasks 4 and 7 own these tests.
 
 ## File map
 
@@ -46,7 +46,7 @@
 - `Sources/ArchiveEngine/OwnedProcess.swift`, `ArchiveJob.swift`, `ArchiveVerifier.swift`: streaming export, job lifecycle and validation.
 - `Sources/BottleArchive/BottleArchiveApp.swift`, `ArchiveViewModel.swift`, `ContentView.swift`, `WindowSupport.swift`, `SupportViews.swift`: native interface and supporting windows.
 - `Sources/BottleArchive/Resources/<language>.lproj/Localizable.strings`: app and Help copy in the eight languages above.
-- `Tests/ArchiveEngineTests/Fixtures.swift`, `DiscoveryTests.swift`, `ScannerTests.swift`, `EstimatorTests.swift`, `JobTests.swift`, `VerifierTests.swift`, `CrossOverRoundTripTests.swift`: meaningful engine and integration coverage.
+- `Tests/ArchiveEngineTests/Fixtures.swift`, `DiscoveryTests.swift`, `ScannerTests.swift`, `EstimatorTests.swift`, `OwnedProcessTests.swift`, `JobTests.swift`, `VerifierTests.swift`, `CrossOverRoundTripTests.swift`: meaningful engine and integration coverage.
 - `Tests/BottleArchiveStateTests/ViewModelTests.swift`: selection, estimation and job state transitions in a small testable presentation-state target if required by SwiftPM executable testing limits.
 - `script/build_and_run.sh`, `script/package.sh`, `script/create_icon.swift`: build, stage, sign, launch and package the local app.
 - `.codex/environments/environment.toml`, `README.md`, `docs/verification.md`: Run action, usage and recorded delivery checks.
@@ -91,12 +91,41 @@
 - [ ] Implement the estimator and CZlib module. Group files by extension and size band, prioritise strata by represented bytes, and sample up to 1 MiB per chunk from the beginning, middle and end of eligible large files. Use zlib at the chosen level, weight ratios by stratum bytes, treat unsampled strata conservatively as uncompressed and add estimated tar framing. Stop at 64 MiB sampled; check cancellation between reads. A sampling failure produces an unavailable estimate without invalidating the bottle.
 - [ ] Run `swift test --filter EstimatorTests`; require all to pass. Commit `feat: estimate archive size from bounded samples`.
 
-## Task 3: Streaming export and owned cancellation
+## Task 3: Owned subprocesses and cancellation
 
-**Consumes:** Task 1 models and snapshot.
-**Produces:** `ArchiveRequest(bottle: Bottle, destination: URL, compression: CompressionPreset, crossOverApp: URL)`; `ArchiveProgress(stage: ArchiveStage, fraction: Double?, processedBytes: UInt64, outputBytes: UInt64, elapsedSeconds: Double, remainingSeconds: Double?)`; `ArchiveJob.start(request: ArchiveRequest, snapshot: BottleSnapshot) -> AsyncThrowingStream<ArchiveEvent, Error>` and `ArchiveJob.cancel()`; events `.progress(ArchiveProgress)` and `.completed(ArchiveResult)`.
+**Consumes:** Task 1 error categories.
+**Produces:** `OwnedProcess.spawn(executable: URL, arguments: [String], environment: [String: String], stdin: Int32?, stdout: Int32?) throws -> OwnedProcess`; `wait() async throws -> Int32`, `cancel()`, `stderrTail: String`, and pipe handles owned by the instance. A supplied descriptor is duplicated into the child; the caller retains its original descriptor.
 
-- [ ] Add failing tests using executable fixtures for exporter failure, compressor failure, full/unwritable destination injection, collision-free names, bounded stderr capture, duplicate starts and cancellation with child descendants. Assert that no final file appears on failure and an unrelated sentinel process keeps running:
+- [ ] Add failing `OwnedProcessTests` using executable fixtures for exit statuses, bounded stderr, an inherited child process, a blocked pipe and an unrelated sentinel process. Assert nonzero exit is observable, stderr is at most 64 KiB, owned children exit after cancellation and the unrelated sentinel stays alive.
+- [ ] Run `swift test --filter OwnedProcessTests`; confirm failure before implementation.
+- [ ] Implement the process wrapper and C bridge with POSIX spawn argument/environment arrays and a separate process group per owned process. Suppress SIGPIPE crashes and report broken-pipe errors. Drain stderr concurrently, keeping a 64 KiB tail. Cancellation terminates only recorded groups, escalates after a bounded grace period, closes owned pipes and reaps children. Ensure fixture descendants cannot keep cancellation blocked indefinitely.
+- [ ] Run `swift test --filter OwnedProcessTests`; require all to pass. Commit `feat: manage owned archive subprocesses`.
+
+## Task 4: Archive verification
+
+**Consumes:** Task 3 process wrapper and progress callback.
+**Produces:** `ArchiveVerifier.verify(url: URL, expectedBottleName: String, progress: @Sendable (Double) -> Void) async throws -> VerificationResult`; result contains `entryCount: Int`, `bottleName: String` and `verifiedBytes: UInt64`.
+
+- [ ] Add failing tests for a valid archive, gzip checksum corruption, truncation, missing configuration, multiple roots, traversal names, a long Unicode path and a symbolic link to an external directory:
+
+```swift
+#expect(validResult.bottleName == fixture.bottle.name)
+#expect(validResult.entryCount > 0)
+#expect(throws: ArchiveError.self) { try await ArchiveVerifier.verify(url: fixture.truncatedArchive, expectedBottleName: fixture.bottle.name, progress: { _ in }) }
+#expect(throws: ArchiveError.self) { try await ArchiveVerifier.verify(url: fixture.multipleRootArchive, expectedBottleName: fixture.bottle.name, progress: { _ in }) }
+#expect(fixture.externalTargetWasNotRead)
+```
+
+- [ ] Run `swift test --filter VerifierTests`; confirm failure before implementation.
+- [ ] Implement `ArchiveVerifier.verify` with an owned `gzip -t` process to check the entire compressed stream, feeding it in bounded chunks and measuring compressed bytes for the first half of verification progress. Then use libarchive's gzip/tar reader to validate every entry without extraction, measuring its input callback bytes for the second half. Support PAX/GNU long names through libarchive. Require one normalised bottle root and a regular `cxbottle.conf`; reject traversal or extra roots while allowing external link targets to remain links. Capture file identity/metadata before and after validation to reject replacement or modification during verification. Both passes honour cancellation.
+- [ ] Run `swift test --filter VerifierTests`; require all to pass. Commit `feat: verify archives before publishing them`.
+
+## Task 5: Streaming export and publication
+
+**Consumes:** Task 1 models and snapshot, Task 3 process wrapper and Task 4 verifier.
+**Produces:** `ArchiveRequest(bottle: Bottle, destination: URL, compression: CompressionPreset, crossOverApp: URL)`; `ArchiveProgress(stage: ArchiveStage, fraction: Double?, processedBytes: UInt64, outputBytes: UInt64, elapsedSeconds: Double, remainingSeconds: Double?)`; `ArchiveJob.start(request: ArchiveRequest, snapshot: BottleSnapshot) -> AsyncThrowingStream<ArchiveEvent, Error>` and `ArchiveJob.cancel()`; events `.progress(ArchiveProgress)` and `.completed(ArchiveResult)`. `ArchiveStage` has `.preparing`, `.archiving`, `.verifying` and `.completed`; `ArchiveResult` contains `archiveURL: URL`, `compression: CompressionPreset`, `sourceBytes: UInt64`, `archiveBytes: UInt64`, `elapsedSeconds: Double` and `verified: Bool`.
+
+- [ ] Add failing tests using executable fixtures for exporter failure, compressor failure, full/unwritable destination injection, collision-free names, bounded stderr capture, duplicate starts and job cancellation after the process wrapper has already proved descendant ownership. Assert that no final file appears on failure and an unrelated sentinel process keeps running:
 
 ```swift
 #expect(!fixture.finalArchiveExists)
@@ -107,36 +136,14 @@
 ```
 
 - [ ] Run `swift test --filter JobTests`; confirm failure before implementation.
-- [ ] Implement `OwnedProcess` and the C bridge with POSIX spawn arguments/environment arrays and a separate process group per owned process. Suppress SIGPIPE crashes and report broken-pipe errors. Drain each stderr pipe concurrently with a 64 KiB retained tail. Cancellation terminates only recorded groups, escalates after a bounded grace period, closes pipes and reaps children.
 - [ ] Implement `ArchiveJob`: resolve CrossOver, set `CX_BOTTLE_PATH` to the selected bottle's parent, reject an active selected bottle, repeat preflight, reserve a unique timestamped partial file and connect exporter stdout to gzip stdin through a byte-counting relay. Use gzip levels 1/6/9 with `-n -c`; direct gzip stdout to that file. Start with `Preparing`, show approximate byte progress capped at 99%, and compute ETA only after enough throughput data. Require both exit statuses to be successful. Invoke Task 4 verification before publication. Hold and release an IOKit idle-sleep assertion for the job.
 - [ ] Keep completed output reserved against races: atomically move the verified partial file to its unique final name without replacement. Remove only this job's incomplete file after cancellation/failure when the destination remains reachable; explain when it cannot be removed. Save a concise local result and privacy-safe diagnostic categories.
-- [ ] Run `swift test --filter JobTests` after Task 4 is available; require all to pass. Commit `feat: stream bottle archives with progress and cancellation`.
+- [ ] Run `swift test --filter JobTests`; require all to pass. Commit `feat: stream bottle archives with progress and cancellation`.
 
-## Task 4: Archive verification
+## Task 6: Native interface and preferences
 
-Implement this before closing Task 3's test cycle because publication depends on it.
-
-**Consumes:** Task 3 process wrapper and progress callback.
-**Produces:** `ArchiveVerifier.verify(url: URL, expectedBottleName: String, progress: @Sendable (Double) -> Void) async throws -> VerificationResult`; result contains `entryCount: Int`, `bottleName: String` and `verifiedBytes: UInt64`.
-
-- [ ] Add failing tests for a valid archive, gzip checksum corruption, truncation, missing configuration, multiple roots, traversal names, a long Unicode path and a symbolic link to an external directory:
-
-```swift
-#expect(validResult.bottleName == fixture.bottle.name)
-#expect(validResult.entryCount > 0)
-#expect(throws: ArchiveError.self) { try await verify(fixture.truncatedArchive) }
-#expect(throws: ArchiveError.self) { try await verify(fixture.multipleRootArchive) }
-#expect(fixture.externalTargetWasNotRead)
-```
-
-- [ ] Run `swift test --filter VerifierTests`; confirm failure before implementation.
-- [ ] Use an owned `gzip -t` process to check the entire compressed stream, feeding it in bounded chunks and measuring compressed bytes for the first half of verification progress. Then use libarchive's gzip/tar reader to validate every entry without extraction, measuring its input callback bytes for the second half. Support PAX/GNU long names through libarchive. Require one normalised bottle root and a regular `cxbottle.conf`; reject traversal or extra roots while allowing external link targets to remain links. Capture file identity/metadata before and after validation to reject replacement or modification during verification. Both passes honour cancellation.
-- [ ] Run `swift test --filter 'VerifierTests|JobTests'`; require all to pass. Commit `feat: verify archives before publishing them`.
-
-## Task 5: Native interface and preferences
-
-**Consumes:** Tasks 1-4 public interfaces.
-**Produces:** `@MainActor ArchiveViewModel` with `selectBottle(_:)`, `setCompression(_:)`, `estimateSize()`, `createArchive()`, `cancel()` and observable selection, estimate, progress, result and error states.
+**Consumes:** Tasks 1-5 public interfaces.
+**Produces:** `@MainActor ArchiveViewModel` with `selectBottle(_:)`, `setCompression(_:)`, `estimateSize()`, `createArchive()`, `cancel()` and observable selection, estimate, progress, result and error states, including `canCreateArchive: Bool`, `destination: URL`, `compression: CompressionPreset` and `completedResult: ArchiveResult?`.
 
 - [ ] Add failing state tests for selecting a bottle, changing compression, stale estimate rejection, missing external drive, a second start while busy, cancellation and completion. Assert:
 
@@ -144,7 +151,7 @@ Implement this before closing Task 3's test cycle because publication depends on
 #expect(model.compression == .balanced)
 #expect(model.destination.path == "/Volumes/External/Crossover Archives")
 #expect(model.estimate?.gzipLevel == model.compression.gzipLevel)
-#expect(!model.canCreateArchiveWhenBusy)
+#expect(!model.canCreateArchive)
 #expect(model.completedResult == nil || model.completedResult!.verified)
 ```
 
@@ -153,7 +160,7 @@ Implement this before closing Task 3's test cycle because publication depends on
 - [ ] Implement native menus, compact About and Help, locale-aware formatting, keyboard shortcuts and accessibility labels. Provide a close/quit choice for an active job and preview privacy-safe diagnostics before copying. Keep strings in the eight localisation folders. Use the approved single icon and direct main-window settings exception; no commerce or account is needed for this personal app.
 - [ ] Run `swift test --filter ViewModelTests`; require all to pass. Stage and launch the actual `.app` using `script/build_and_run.sh --verify`. Inspect native UI in light and dark modes, tab through controls, alter and relaunch the window, and exercise estimation, selection and cancellation on disposable fixture data. Commit `feat: add native bottle archive interface`.
 
-## Task 6: CrossOver restore proof and app delivery
+## Task 7: CrossOver restore proof and app delivery
 
 **Consumes:** Completed app and engine.
 **Produces:** `dist/Bottle Archive.app`, `dist/BottleArchive-1.0-arm64.zip`, usage instructions and verification record.
