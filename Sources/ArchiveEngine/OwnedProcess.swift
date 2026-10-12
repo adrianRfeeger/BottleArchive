@@ -69,7 +69,7 @@ public final class OwnedProcess: @unchecked Sendable {
         return OwnedProcess(pid: pid, output: output?.0, errors: errors.0)
     }
     public func wait() async throws -> Int32 {
-        try await withTaskCancellationHandler(operation: {
+        await withTaskCancellationHandler(operation: {
             await withCheckedContinuation { continuation in
                 DispatchQueue.global(qos: .utility).async {
                     self.condition.lock()
