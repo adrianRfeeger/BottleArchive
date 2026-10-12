@@ -17,9 +17,11 @@ The destination uses a native folder picker. The app remembers the selected dest
 
 Compression choices are Fast (gzip level 1), Balanced (level 6, the default) and Maximum (level 9). Each produces a `.cxarchive` file. The labels explain that maximum compression takes longer and may make little difference for files that are already compressed.
 
+Before starting, show the bottle size and estimated archive size for the selected compression choice. Scan file sizes without following symbolic links, then compress a bounded, representative sample of local file data. Include different file types and sizes, with samples from several positions in large files, and weight the resulting ratios by the scanned content. Keep sample data in memory. Show Estimating while this runs, allow it to be cancelled, and refresh the estimate when the bottle or compression choice changes. Label the result approximate because compression varies across the rest of the bottle. If sampling fails, show Size estimate unavailable without preventing an otherwise valid archive job.
+
 During a job, the window shows the stage, progress, bytes processed, output size, elapsed time and an estimated remaining time when enough data is available. Scanning has an indeterminate indicator. Archive progress is an estimate based on scanned content size and the tar bytes processed. It stays below completion until verification succeeds. Verification has its own progress stage. Cancel stays available during scanning, archiving and verification.
 
-On success, show the archive size and Reveal in Finder. On failure, explain the cause and the next action, such as reconnecting the destination drive or freeing space.
+On success, show the actual archive size and Reveal in Finder. On failure, explain the cause and the next action, such as reconnecting the destination drive or freeing space.
 
 ## Archive engine and compatibility
 
@@ -49,9 +51,9 @@ Before export, check that the destination is outside the selected bottle and has
 
 Read the completed compressed stream fully to validate gzip integrity. Check the tar layout for one bottle root and its `cxbottle.conf`, while respecting links and metadata. Validation must not extract or change the live bottle. A damaged or truncated archive stays incomplete and is reported as a failure.
 
-Before delivery, use a disposable fixture bottle to test all compression levels and restore the produced archive using CrossOver's own restore command into an isolated test location. Check representative file contents, names containing spaces and Unicode, permissions, empty files and symbolic links. Also test cancellation, invalid bottles, a destination inside the bottle, process failures and an existing output filename.
+Before delivery, use a disposable fixture bottle to test all compression levels and restore the produced archive using CrossOver's own restore command into an isolated test location. Check representative file contents, names containing spaces and Unicode, permissions, empty files and symbolic links. Also test cancellation, invalid bottles, a destination inside the bottle, process failures and an existing output filename. Check size estimation using fixtures containing compressible text, data that is already compressed and a mixture of both. Confirm changing compression refreshes the estimate, and verify that sampling remains bounded and does not follow external links.
 
-Inspect the actual running GUI for bottle selection, folder selection, progress updates, cancellation, success and errors. Verify both light and dark appearances, keyboard access, readable labels and window restoration.
+Inspect the actual running GUI for bottle selection, folder selection, estimated archive size, compression changes, progress updates, cancellation, success and errors. Verify both light and dark appearances, keyboard access, readable labels and window restoration.
 
 ## Implementation and delivery
 
