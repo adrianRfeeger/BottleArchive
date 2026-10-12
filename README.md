@@ -1,45 +1,90 @@
 # Bottle Archive
 
-Bottle Archive creates CrossOver bottle backups with a native Mac interface, estimated archive size, compression choices, progress and cancellation. It requires macOS 15 or newer, an Apple silicon Mac and an installed CrossOver app.
+Bottle Archive is a native macOS app for creating CrossOver bottle backups. It uses CrossOver's installed exporter and saves `.cxarchive` files that CrossOver can restore.
 
-Open `dist/Bottle Archive.app`, or unzip `dist/BottleArchive-1.1.1-arm64.zip` and open the app inside. You can move the app into Applications. This is a locally signed owner build.
+The app has compression choices, parallel compression, a sampled size estimate, progress, elapsed and remaining time, and cancellation. It verifies the compressed archive and bottle structure before publishing the finished file. Existing archives are kept.
+
+## Requirements
+
+- macOS 15 or later on Apple silicon.
+- An installed copy of CrossOver. Compatibility has been tested with CrossOver 26.3.
+- Xcode Command Line Tools and a Swift 6 toolchain to build from source.
+
+CrossOver is an external dependency and is not included in this repository.
+
+## Build and run
+
+```sh
+git clone https://github.com/adrianRfeeger/BottleArchive.git
+cd BottleArchive
+./script/build_and_run.sh
+```
+
+The script builds the app and its compression helper, signs them locally, and opens `dist/Bottle Archive.app`. You can move the app to Applications. Local builds are ad hoc signed and are not notarised.
+
+To create a Release app and ZIP:
+
+```sh
+./script/package.sh
+```
+
+The current package is `dist/BottleArchive-1.1.1-arm64.zip`. Build output is excluded from Git. The build script refuses to rebuild while this app has an active archive job.
 
 ## Create a backup
 
 1. Close the selected bottle's Windows applications in CrossOver.
-2. Choose the bottle and destination folder. The initial destination is `/Volumes/External/Crossover Archives`; the app remembers later choices.
-3. Choose Fast, Balanced or Maximum compression, and a thread count. Automatic uses all but two available CPU cores when possible. The estimated size comes from a bounded sample and can differ from the final archive.
-4. Choose Create Archive. The app reports creation and verification separately. Reveal in Finder opens the finished file.
+2. Choose a bottle and a destination folder. The app discovers the usual CrossOver bottle locations and also lets you choose a bottle manually.
+3. Choose a compression level and thread count.
+4. Choose **Create Archive**. The app reports creation and verification separately, then lets you reveal the finished archive in Finder.
 
-Fast uses gzip level 1, Balanced level 6 and Maximum level 9. Each produces a `.cxarchive` file. Existing archives are kept, and each new filename includes the bottle name and date/time. The app streams to the destination without making an uncompressed copy of the bottle. Compression uses the bundled parallel gzip helper. More threads can speed up compression; source reading, destination writing and verification may still limit the total speed.
+The app remembers the selected folders, compression level and thread count. Its initial destination is `/Volumes/External/Crossover Archives`; choose another folder if that location does not exist.
 
-## Restore
+| Compression | gzip level | Tradeoff |
+| --- | ---: | --- |
+| Fast | 1 | Less compression time, usually a larger archive |
+| Balanced | 6 | A balance of compression time and size |
+| Maximum | 9 | More compression work, usually a smaller archive |
 
-In CrossOver, choose Bottle > Import Bottle Archive and select the completed `.cxarchive` file. The app's test suite creates and restores a disposable bottle with CrossOver itself at all three compression levels.
+Automatic uses two fewer compression workers than the available CPU cores when there are more than two cores. You can also select a count manually, up to the available core count. More threads can speed up compression, while reading the bottle, writing to the destination and verification may still limit the total time.
 
-Symbolic links stay links. Files in linked folders outside the bottle are not included. For Skyrim, also back up `~/Documents/My Games/Skyrim Special Edition`, including saves and game INI files.
+Size estimates use a bounded sample and may differ from the final archive. The app streams directly to the destination without making an uncompressed copy of the bottle. New filenames contain the bottle name and date/time, with a suffix if needed to keep an existing file.
 
-## Cancel or recover
+## Restore a backup
 
-Cancel stops this app's archive processes. Existing backups remain available. An interrupted job removes its own partial file when possible. If a drive disconnects, a hidden `.BottleArchive-….partial` file may remain on it; reconnect the drive and remove that incomplete file. A completed archive only receives the `.cxarchive` extension after verification.
+In CrossOver, choose **Bottle > Import Bottle Archive** and select the completed `.cxarchive` file.
 
-If the app reports that the bottle is running, close its Windows applications through CrossOver before retrying. If the destination is unavailable, reconnect the drive or choose another folder. Keep the app open while archiving; it prevents idle system sleep during the job.
+Symbolic links remain links. The archive does not include files in linked folders outside the bottle. Back up those files separately. For Skyrim, this can include saves and game settings under `~/Documents/My Games/Skyrim Special Edition`.
+
+## Cancel and recover
+
+Cancel stops this app's archive processes. It removes its incomplete file when the destination is still accessible, and keeps existing backups.
+
+If a drive disconnects, a hidden `.BottleArchive-….partial` file may remain. Reconnect the drive and remove that incomplete file. The app assigns the `.cxarchive` extension only after verification succeeds.
+
+If the app reports that the bottle is running, close its Windows applications in CrossOver before retrying. If the destination is unavailable, reconnect the drive or choose another folder. Keep the app open while archiving; it prevents idle system sleep during the job.
 
 ## Privacy
 
-The app processes file contents locally and does not upload them. It stores selected folders, compression and window layout in its preferences, and small local result records under `~/Library/Application Support/BottleArchive/Results`. Diagnostics show technical status without file contents, full paths or account details. You preview them before copying.
+File contents are processed locally and are not uploaded. The app stores preferences and small result records under `~/Library/Application Support/BottleArchive/Results`. Diagnostics contain technical status without file contents, full paths or account details, and can be previewed before copying.
 
-## Development
+## Tests
 
 ```sh
-./script/build_and_run.sh --verify
 swift test --build-system native
-BOTTLE_ARCHIVE_INTEGRATION=1 swift test --build-system native --filter CrossOverRoundTripTests
-./script/package.sh
 ```
 
-The project is independent of the bottles it archives. The build script stages a normal app bundle and refuses to rebuild while the running app has an active archive job. CrossOver is used from its installed location and is not included in this app.
+The CrossOver integration test is enabled separately. It creates a disposable bottle, exports all three compression levels with the bundled parallel compressor, restores each through CrossOver, and checks fixture hashes, permissions, empty files and symbolic links:
 
-The app uses macOS zlib and libarchive. Public libarchive headers are included because the macOS SDK ships the library without its headers; their BSD licence notices are preserved in `Sources/CArchive/headers`. The source does not depend on Homebrew at runtime.
+```sh
+BOTTLE_ARCHIVE_INTEGRATION=1 swift test --build-system native --filter CrossOverRoundTripTests
+```
 
-Parallel compression uses pigz 2.8 by Mark Adler, built from the pinned official source and linked to macOS libraries. The upstream licence is included in the app and under `Vendor/pigz`.
+The app's verification and benchmark record is in [docs/verification.md](docs/verification.md). The recorded compression benchmark uses synthetic data and does not measure a complete Skyrim backup.
+
+## Licence
+
+Bottle Archive's original code is available under the [MIT licence](LICENSE), copyright 2026 Adrian Feeger.
+
+Included dependencies retain their own licences. Parallel compression uses [pigz 2.8](https://www.zlib.net/pigz/) by Mark Adler. The libarchive headers retain their BSD notices; the app links macOS's system zlib and libarchive libraries. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [Vendor/pigz/UPSTREAM.md](Vendor/pigz/UPSTREAM.md).
+
+Bottle Archive is an independent utility and is not affiliated with CodeWeavers.

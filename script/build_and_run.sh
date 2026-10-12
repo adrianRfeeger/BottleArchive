@@ -25,6 +25,8 @@ mkdir -p "$STAGED_APP/Contents/MacOS" "$STAGED_APP/Contents/Resources" "$STAGED_
 cp "$BINARY_DIR/BottleArchive" "$STAGED_APP/Contents/MacOS/"
 cp "$BINARY_DIR/pigz" "$STAGED_APP/Contents/Helpers/"
 cp "$ROOT_DIR/Vendor/pigz/README" "$STAGED_APP/Contents/Resources/pigz-LICENSE.txt"
+cp "$ROOT_DIR/LICENSE" "$STAGED_APP/Contents/Resources/LICENSE.txt"
+cp "$ROOT_DIR/THIRD_PARTY_NOTICES.md" "$STAGED_APP/Contents/Resources/THIRD_PARTY_NOTICES.md"
 /usr/bin/codesign --force --sign - "$STAGED_APP/Contents/Helpers/pigz"
 cp -R "$BINARY_DIR/BottleArchive_BottleArchive.bundle" "$STAGED_APP/Contents/Resources/"
 if [[ ! -f "$ROOT_DIR/.build/BottleArchive.icns" || "$ROOT_DIR/script/create_icon.swift" -nt "$ROOT_DIR/.build/BottleArchive.icns" ]]; then
