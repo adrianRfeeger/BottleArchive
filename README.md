@@ -1,12 +1,26 @@
 # Bottle Archive
 
-Bottle Archive is a native macOS app for creating CrossOver bottle backups. It uses CrossOver's installed exporter and saves `.cxarchive` files that CrossOver can restore.
+Spend less time compressing CrossOver backups. Bottle Archive puts your Mac's CPU cores to work, with a native interface for choosing speed or a smaller archive, tracking progress and creating a verified `.cxarchive` you can restore in CrossOver.
 
-The app has compression choices, parallel compression, a sampled size estimate, progress, elapsed and remaining time, and cancellation. It verifies the compressed archive and bottle structure before publishing the finished file. Existing archives are kept.
+On an 18-core Apple M5 Pro, Balanced compression of a 256 MiB test fixture fell from **1.70 seconds to 0.14 seconds** with Automatic's 16 workers: about **12 times faster compression** than the original single-thread compressor.
+
+| Compression test | Workers | Median time |
+| --- | ---: | ---: |
+| Original macOS gzip | 1 | 1.700 s |
+| Bottle Archive, Automatic | 16 | 0.144 s |
+| Bottle Archive, all available cores | 18 | 0.134 s |
+
+The benchmark used equal portions of random and repeating data, three runs per case, and discarded output to isolate compression speed. Full backup time also depends on drive speed, bottle contents and verification. [Method and results](docs/verification.md#compression-benchmark).
+
+The app also has a sampled size estimate, elapsed and remaining time, and cancellation. It verifies the compressed archive and bottle structure before publishing the finished file. Existing archives are kept.
+
+## Download
+
+[Download the universal macOS app](https://github.com/adrianRfeeger/BottleArchive/releases/latest). One app contains both Apple silicon and Intel executables, including the bundled parallel compressor. Published release builds are Developer ID signed and notarised.
 
 ## Requirements
 
-- macOS 15 or later on Apple silicon.
+- macOS 15 or later on Apple silicon or Intel.
 - An installed copy of CrossOver. Compatibility has been tested with CrossOver 26.3.
 - Xcode Command Line Tools and a Swift 6 toolchain to build from source.
 
@@ -28,7 +42,17 @@ To create a Release app and ZIP:
 ./script/package.sh
 ```
 
-The current package is `dist/BottleArchive-1.1.1-arm64.zip`. Build output is excluded from Git. The build script refuses to rebuild while this app has an active archive job.
+The current package is `dist/BottleArchive-1.1.1-universal.zip`. The packaging script builds both architectures and combines the app and compression helper. Build output is excluded from Git. The build script refuses to rebuild while this app has an active archive job.
+
+For Developer ID signing and notarisation, provide your own certificate and an existing `notarytool` keychain profile:
+
+```sh
+BOTTLE_ARCHIVE_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+BOTTLE_ARCHIVE_NOTARY_PROFILE="your-notary-profile" \
+./script/package.sh
+```
+
+The script checks Apple's result, staples the accepted ticket to the app, checks Gatekeeper, then packages the app and writes a `.sha256` checksum file. Credentials stay in your Keychain.
 
 ## Create a backup
 

@@ -68,3 +68,13 @@ Version 1.1.1 (3) fixes an error after moving the running app into Applications.
 Two regression tests failed before the fix, including the exact `Could not start pigz: No such file or directory` failure. They now pass, and the standard suite reports 40 declared tests (39 regular tests and the separately enabled CrossOver integration case).
 
 The fixed installed app in `/Applications` created and verified a 21 MB fixture archive with Automatic (16) threads. Its app and helper executables matched the extracted 1.1.1 ZIP byte for byte, and the signature passed. Skyrim selection and normal launch settings were restored after the test. The actual running process path was independently checked after a temporary app moved; native UI automation could not address that moved process, so the live-move behavior is covered by the regression tests rather than an interactive acceptance claim.
+
+## Universal GitHub release
+
+The 1.1.1 universal release contains `arm64` and `x86_64` slices in both the app and the pigz helper. Both slices target macOS 15. The exact ZIP was extracted and checked for its bundle metadata, icon, eight localisations, licences, system-only libraries, checksum and both executable architectures.
+
+The app and helper are Developer ID signed with hardened runtime and a secure timestamp. Apple accepted notarisation, the ticket was stapled to the app, and the extracted ZIP passed strict signature, staple and Gatekeeper validation (`source=Notarized Developer ID`).
+
+The standard Apple silicon suite passed 39 regular tests, with the separately enabled CrossOver integration case skipped. This Xcode installation's SwiftPM test loader is arm64-only, so it could not load the compiled x86_64 test bundle. Intel validation therefore used the exact Release app under Rosetta: its running CPU type was independently confirmed as x86_64, and its GUI created and verified a 21 MB fixture archive. Both helper slices ran successfully. The same extracted app also created and verified a fixture archive in arm64 mode. Native Intel hardware was not available for testing.
+
+Release ZIP: `BottleArchive-1.1.1-universal.zip`, 1,672,700 bytes. SHA-256: `02a3f6f16198d5a761abda507a546ae183b54264d72c7adb5e635ec480a089d1`.
