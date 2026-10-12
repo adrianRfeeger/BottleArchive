@@ -1,4 +1,5 @@
 import Foundation
+import ProcessSupport
 
 public enum CompressionThreads {
     public static func resolved(_ requested: Int, processorCount: Int = ProcessInfo.processInfo.activeProcessorCount) -> Int {
@@ -11,13 +12,23 @@ public struct CompressionTool: Sendable {
     public let executable: URL
     public let supportsThreads: Bool
     public init(executable: URL, supportsThreads: Bool) { self.executable = executable; self.supportsThreads = supportsThreads }
-    public static func locate() -> CompressionTool {
-        let packaged = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/pigz")
-        let development = URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().appendingPathComponent("pigz")
-        if let helper = [packaged, development].first(where: { FileManager.default.isExecutableFile(atPath: $0.path) }) {
+    public static func locate(bundleURL: URL = Bundle.main.bundleURL, executableURL: URL? = nil) -> CompressionTool {
+        let executableDirectory = (executableURL ?? runningExecutableURL()).deletingLastPathComponent()
+        let packaged = bundleURL.appendingPathComponent("Contents/Helpers/pigz")
+        let development = executableDirectory.appendingPathComponent("pigz")
+        var candidates = [packaged, development]
+        if executableDirectory.lastPathComponent == "MacOS", executableDirectory.deletingLastPathComponent().lastPathComponent == "Contents" {
+            candidates.insert(executableDirectory.deletingLastPathComponent().appendingPathComponent("Helpers/pigz"), at: 0)
+        }
+        if let helper = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0.path) }) {
             return CompressionTool(executable: helper, supportsThreads: true)
         }
         return CompressionTool(executable: URL(fileURLWithPath: "/usr/bin/gzip"), supportsThreads: false)
+    }
+    private static func runningExecutableURL() -> URL {
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let length = buffer.withUnsafeMutableBufferPointer { ps_executable_path($0.baseAddress, UInt32($0.count)) }
+        return URL(fileURLWithPath: length > 0 ? String(cString: buffer) : CommandLine.arguments[0])
     }
     public func arguments(level: Int, threads: Int, processorCount: Int = ProcessInfo.processInfo.activeProcessorCount) -> [String] {
         let base = ["-n", "-\(level)", "-c"]

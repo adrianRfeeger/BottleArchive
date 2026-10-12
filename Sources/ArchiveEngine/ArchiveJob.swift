@@ -6,12 +6,13 @@ public final class ArchiveJob: @unchecked Sendable {
     private let lock = NSLock()
     private var task: Task<Void, Never>?
     private var processes = [OwnedProcess]()
-    private let compressionTool: CompressionTool
+    private let compressionToolProvider: @Sendable () -> CompressionTool
     public init(gzip: URL? = nil, parallelGzip: URL? = nil) {
-        compressionTool = parallelGzip.map { CompressionTool(executable: $0, supportsThreads: true) }
+        let override = parallelGzip.map { CompressionTool(executable: $0, supportsThreads: true) }
             ?? gzip.map { CompressionTool(executable: $0, supportsThreads: false) }
-            ?? CompressionTool.locate()
+        compressionToolProvider = { override ?? CompressionTool.locate() }
     }
+    init(compressionToolProvider: @escaping @Sendable () -> CompressionTool) { self.compressionToolProvider = compressionToolProvider }
     public func start(request: ArchiveRequest, snapshot: BottleSnapshot) -> AsyncThrowingStream<ArchiveEvent, Error> {
         let pair = AsyncThrowingStream<ArchiveEvent, Error>.makeStream(bufferingPolicy: .bufferingNewest(64))
         lock.lock()
@@ -73,6 +74,7 @@ public final class ArchiveJob: @unchecked Sendable {
             if !published, let info = try? metadata(partial), info.st_ino == partialInfo.st_ino, info.st_dev == partialInfo.st_dev { unlink(partial.path) }
         }
         let input = Pipe()
+        let compressionTool = compressionToolProvider()
         let compressor = try OwnedProcess.spawn(executable: compressionTool.executable, arguments: compressionTool.arguments(level: request.compression.gzipLevel, threads: request.threads), stdin: input.fileHandleForReading.fileDescriptor, stdout: fd)
         register(compressor)
         try input.fileHandleForReading.close()

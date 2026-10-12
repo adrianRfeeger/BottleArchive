@@ -113,6 +113,6 @@ import ArchiveEngine
         else {generation += 1;estimationTask?.cancel();estimationTask=nil;isEstimating=false;status="Size estimate unavailable"}
     }
     public func diagnostics() -> String {
-        "Bottle Archive 1.1 (2)\nmacOS: \(ProcessInfo.processInfo.operatingSystemVersionString)\nCrossOver available: \(crossOverApp != nil)\nCompression level: \(compression.gzipLevel)\nCompression threads: \(CompressionThreads.resolved(threads))\nArchive active: \(isBusy)\nEstimate available: \(estimate != nil)\nLast stage: \(progress?.stage.rawValue ?? "none")\nLast result verified: \(completedResult?.verified ?? false)"
+        "Bottle Archive 1.1.1 (3)\nmacOS: \(ProcessInfo.processInfo.operatingSystemVersionString)\nCrossOver available: \(crossOverApp != nil)\nCompression level: \(compression.gzipLevel)\nCompression threads: \(CompressionThreads.resolved(threads))\nArchive active: \(isBusy)\nEstimate available: \(estimate != nil)\nLast stage: \(progress?.stage.rawValue ?? "none")\nLast result verified: \(completedResult?.verified ?? false)"
     }
 }

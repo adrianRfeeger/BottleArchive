@@ -2,7 +2,7 @@
 
 Bottle Archive creates CrossOver bottle backups with a native Mac interface, estimated archive size, compression choices, progress and cancellation. It requires macOS 15 or newer, an Apple silicon Mac and an installed CrossOver app.
 
-Open `dist/Bottle Archive.app`, or unzip `dist/BottleArchive-1.1-arm64.zip` and open the app inside. You can move the app into Applications. This is a locally signed owner build.
+Open `dist/Bottle Archive.app`, or unzip `dist/BottleArchive-1.1.1-arm64.zip` and open the app inside. You can move the app into Applications. This is a locally signed owner build.
 
 ## Create a backup
 

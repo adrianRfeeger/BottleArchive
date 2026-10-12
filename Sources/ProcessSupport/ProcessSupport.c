@@ -3,6 +3,9 @@
 #include <signal.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <libproc.h>
+#include <unistd.h>
+int ps_executable_path(char *buffer, uint32_t size) { return proc_pidpath(getpid(), buffer, size); }
 void ps_ignore_sigpipe(void) { signal(SIGPIPE, SIG_IGN); }
 int ps_spawn(const char *path, char *const argv[], char *const envp[], int input, int output, int error, pid_t *pid) {
     posix_spawnattr_t attr;

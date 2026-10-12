@@ -33,4 +33,44 @@ struct ParallelCompressionTests {
   #expect(try String(contentsOf: arguments, encoding: .utf8).split(separator: "\n").map(String.init) == ["-n", "-9", "-c", "-p", "4"])
  }
 
+ @Test func findsHelperAfterRunningAppMoves() throws {
+  let f = try Fixture(); defer { f.clean() }
+  let original = f.root.appendingPathComponent("Original/Bottle Archive.app")
+  let moved = f.root.appendingPathComponent("Moved/Bottle Archive.app")
+  let helper = original.appendingPathComponent("Contents/Helpers/pigz")
+  try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
+  try Data("#!/bin/sh\nexit 0\n".utf8).write(to: helper)
+  try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
+  try FileManager.default.createDirectory(at: moved.deletingLastPathComponent(), withIntermediateDirectories: true)
+  try FileManager.default.moveItem(at: original, to: moved)
+  let tool = CompressionTool.locate(bundleURL: original, executableURL: moved.appendingPathComponent("Contents/MacOS/BottleArchive"))
+  #expect(tool.executable == moved.appendingPathComponent("Contents/Helpers/pigz"))
+  #expect(tool.supportsThreads)
+ }
+ @Test func jobResolvesHelperAtStartAfterMove() async throws {
+  let f = try Fixture(); defer { f.clean() }
+  let app = try fakeCrossOver(f)
+  let original = f.root.appendingPathComponent("Original/Bottle Archive.app")
+  let moved = f.root.appendingPathComponent("Moved/Bottle Archive.app")
+  let helper = original.appendingPathComponent("Contents/Helpers/pigz")
+  let arguments = f.root.appendingPathComponent("relocated-compression.args")
+  try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
+  try Data(("#!/bin/sh\nprintf '%s\\n' \"$@\" > \"\(arguments.path)\"\nexec /usr/bin/gzip \"$1\" \"$2\" \"$3\"\n").utf8).write(to: helper)
+  try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: helper.path)
+  let job = ArchiveJob(compressionToolProvider: {
+   let current = FileManager.default.fileExists(atPath: original.path) ? original : moved
+   return CompressionTool(executable: current.appendingPathComponent("Contents/Helpers/pigz"), supportsThreads: true)
+  })
+  try FileManager.default.createDirectory(at: moved.deletingLastPathComponent(), withIntermediateDirectories: true)
+  try FileManager.default.moveItem(at: original, to: moved)
+  let snapshot = try await BottleScanner.scan(f.bottle)
+  let request = ArchiveRequest(bottle: f.bottle, destination: f.destination, compression: .balanced, crossOverApp: app, threads: 4)
+  var completed = false
+  for try await event in job.start(request: request, snapshot: snapshot) {
+   if case .completed(let result) = event { completed = result.verified }
+  }
+  #expect(completed)
+  #expect(try String(contentsOf: arguments, encoding: .utf8).contains("-p\n4\n"))
+ }
+
 }

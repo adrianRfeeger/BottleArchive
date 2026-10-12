@@ -26,7 +26,7 @@ Tested on Adrian's Apple silicon Mac on 12 and 13 October 2026 with the installe
 - The ZIP is approximately 1.32 MB. The extracted app displayed its native window, estimate and compression controls, then created a verified 21 MB fixture archive. Reveal in Finder selected the finished file, which Finder identified as a CrossOver Bottle Archive.
 - Restored the original Skyrim selection after the packaged-app test. No full-size Skyrim archive was created by these tests.
 - Independent review found two material issues: a compression failure could leave the job waiting for a paused exporter, and the destination check lacked a test during an active job. The fix observes compression exit concurrently and stops the exporter on failure. A regression reproduced the original failure before the fix, then passed in under a second. A second test replaces the destination during export and checks the specific destination error, process exit, preservation of existing files and absence of a published archive.
-- The final standard suite passed 37 regular tests. The declared integration test runs only with `BOTTLE_ARCHIVE_INTEGRATION=1`; its actual three-level restore result is listed above. The reviewer raised no minor findings.
+- The final standard suite passed 39 regular tests. The declared integration test runs only with `BOTTLE_ARCHIVE_INTEGRATION=1`; its actual three-level restore result is listed above. The reviewer raised no minor findings.
 
 ## Implementation decisions
 
@@ -60,3 +60,11 @@ A disposable 256 MiB fixture contained equal portions of random and repeating da
 Automatic was about 11.8 times faster than the original compressor in this test. Reading the bottle, writing to the destination and verifying the archive can limit the total backup speed.
 
 The delivered app and helper matched the extracted GUI-tested Release byte for byte. The final source suite passed after adoption into the Development project. Version 1.1 (2) includes both signed arm64 executables and all eight language resources.
+
+## App relocation fix
+
+Version 1.1.1 (3) fixes an error after moving the running app into Applications. The helper was embedded correctly, but the archive job cached its old location. Helper resolution now happens when each job starts and uses the running executable's current filesystem path, with the bundle and development locations as fallbacks.
+
+Two regression tests failed before the fix, including the exact `Could not start pigz: No such file or directory` failure. They now pass, and the standard suite reports 40 declared tests (39 regular tests and the separately enabled CrossOver integration case).
+
+The fixed installed app in `/Applications` created and verified a 21 MB fixture archive with Automatic (16) threads. Its app and helper executables matched the extracted 1.1.1 ZIP byte for byte, and the signature passed. Skyrim selection and normal launch settings were restored after the test. The actual running process path was independently checked after a temporary app moved; native UI automation could not address that moved process, so the live-move behavior is covered by the regression tests rather than an interactive acceptance claim.

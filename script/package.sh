@@ -3,7 +3,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 BOTTLE_ARCHIVE_CONFIGURATION=release ./script/build_and_run.sh --build-only
-ZIP_PATH="$ROOT_DIR/dist/BottleArchive-1.1-arm64.zip"
+ZIP_PATH="$ROOT_DIR/dist/BottleArchive-1.1.1-arm64.zip"
 TEMP_ZIP="$ROOT_DIR/dist/.BottleArchive-$(date +%s)-$$.zip"
 /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$ROOT_DIR/dist/Bottle Archive.app" "$TEMP_ZIP"
 mv "$TEMP_ZIP" "$ZIP_PATH"

@@ -33,7 +33,7 @@ fi
 cp "$ROOT_DIR/.build/BottleArchive.icns" "$STAGED_APP/Contents/Resources/"
 /usr/bin/python3 - "$STAGED_APP/Contents/Info.plist" <<'PYINFO'
 import plistlib,sys
-info={'CFBundleExecutable':'BottleArchive','CFBundleIdentifier':'com.adrianfeeger.BottleArchive','CFBundleName':'Bottle Archive','CFBundleDisplayName':'Bottle Archive','CFBundlePackageType':'APPL','CFBundleShortVersionString':'1.1','CFBundleVersion':'2','LSMinimumSystemVersion':'15.0','NSPrincipalClass':'NSApplication','CFBundleIconFile':'BottleArchive','CFBundleDevelopmentRegion':'en','CFBundleLocalizations':['en','fr','de','es','it','ja','zh-Hans','pt-BR'],'NSHighResolutionCapable':True}
+info={'CFBundleExecutable':'BottleArchive','CFBundleIdentifier':'com.adrianfeeger.BottleArchive','CFBundleName':'Bottle Archive','CFBundleDisplayName':'Bottle Archive','CFBundlePackageType':'APPL','CFBundleShortVersionString':'1.1.1','CFBundleVersion':'3','LSMinimumSystemVersion':'15.0','NSPrincipalClass':'NSApplication','CFBundleIconFile':'BottleArchive','CFBundleDevelopmentRegion':'en','CFBundleLocalizations':['en','fr','de','es','it','ja','zh-Hans','pt-BR'],'NSHighResolutionCapable':True}
 with open(sys.argv[1],'wb') as f:plistlib.dump(info,f)
 PYINFO
 /usr/bin/codesign --force --sign - "$STAGED_APP"
